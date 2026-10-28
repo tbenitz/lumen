@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumen — Search. See. Feel.</title>
+<style>
+:root {
+  --bg: #0a0a0c;
+  --surface: #141416;
+  --elevated: #1c1c1f;
+  --text: #f4f4f0;
+  --muted: #8a8a8e;
+  --accent: #c8d0d4;
+  --border: #2a2a2e;
+  --radius: 14px;
+}
+[data-theme="light"] {
+  --bg: #f8f8f6;
+  --surface: #ffffff;
+  --elevated: #f0f0ee;
+  --text: #111113;
+  --muted: #666;
+  --accent: #333;
+  --border: #e0e0dc;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { min-height: 100vh; }
+
+header {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px;
+}
+.logo { font-weight: 600; letter-spacing: -0.02em; font-size: 1.25rem; }
+.logo span { opacity: 0.55; font-weight: 400; }
+.search-wrap { flex: 1; max-width: 640px; position: relative; }
+.search-wrap input {
+  width: 100%; background: var(--elevated); border: 1px solid var(--border);
+  color: var(--text); border-radius: 999px; padding: 12px 18px 12px 42px;
+  font-size: 1rem; outline: none; transition: border-color 0.2s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
+.header-actions { display: flex; gap: 8px; }
+.icon-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--text);
+  width: 40px; height: 40px; border-radius: 10px; cursor: pointer; display: grid; place-items: center;
+}
+.icon-btn:hover { background: var(--elevated); }
+
+main { padding: 24px 20px 80px; max-width: 1600px; margin: 0 auto; }
+.filters {
+  display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+}
+.filter-chip {
+  background: var(--elevated); border: 1px solid var(--border); color: var(--muted);
+  padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; cursor: pointer;
+}
+.filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+.surprise { margin-left: auto; }
+
+.masonry {
+  column-count: 4; column-gap: 16px;
+}
+@media (max-width: 1200px) { .masonry { column-count: 3; } }
+@media (max-width: 800px) { .masonry { column-count: 2; } }
+@media (max-width: 500px) { .masonry { column-count: 1; } }
+.masonry-item {
+  break-inside: avoid; margin-bottom: 16px; position: relative;
+  border-radius: var(--radius); overflow: hidden; cursor: pointer;
+  background: var(--elevated);
+}
+.masonry-item img {
+  width: 100%; display: block; transition: transform 0.4s ease;
+}
+.masonry-item:hover img { transform: scale(1.03); }
+.masonry-item .overlay-info {
+  position: absolute; inset: auto 0 0 0; padding: 12px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.65));
+  color: white; font-size: 0.8rem; opacity: 0; transition: opacity 0.25s;
+  pointer-events: none;
+}
+.masonry-item:hover .overlay-info { opacity: 1; }
+
+.sentinel { height: 1px; }
+.loading { text-align: center; padding: 40px; color: var(--muted); }
+
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+  z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal.open { display: flex; }
+.modal-content {
+  background: var(--surface); border-radius: 18px; max-width: 1100px; width: 100%;
+  max-height: 92vh; overflow: auto; display: grid; grid-template-columns: 1.4fr 1fr;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+@media (max-width: 800px) { .modal-content { grid-template-columns: 1fr; max-height: 95vh; } }
+.modal-img { background: #000; display: grid; place-items: center; }
+.modal-img img { max-width: 100%; max-height: 80vh; object-fit: contain; }
+.modal-side { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.modal-side h2 { font-size: 1.1rem; font-weight: 500; }
+.modal-side .meta { color: var(--muted); font-size: 0.9rem; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+  background: var(--text); color: var(--bg); border: none; padding: 10px 16px;
+  border-radius: 10px; cursor: pointer; font-weight: 500;
+}
+.btn.secondary { background: var(--elevated); color: var(--text); border: 1px solid var(--border); }
+.close-btn { position: absolute; top: 16px; right: 16px; }
+
+.panel {
+  position: fixed; top: 0; right: 0; width: min(420px, 100%); height: 100%;
+  background: var(--surface); border-left: 1px solid var(--border);
+  z-index: 90; transform: translateX(100%); transition: transform 0.3s ease;
+  display: flex; flex-direction: column;
+}
+.panel.open { transform: translateX(0); }
+.panel-header { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.panel-body { flex: 1; overflow: auto; padding: 16px; }
+.collection-card {
+  background: var(--elevated); border-radius: 12px; padding: 14px; margin-bottom: 12px; cursor: pointer;
+}
+.collection-card h3 { font-size: 1rem; margin-bottom: 4px; }
+.collection-card p { color: var(--muted); font-size: 0.8rem; }
+.empty { color: var(--muted); text-align: center; padding: 40px 20px; }
+
+.key-gate {
+  position: fixed; inset: 0; background: var(--bg); z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.key-gate.hidden { display: none; }
+.key-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 32px; max-width: 420px; width: 100%; text-align: center;
+}
+.key-box input { width: 100%; margin: 16px 0; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--elevated); color: var(--text); }
+.key-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
+.key-box a { color: var(--accent); }
+
+.history { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.history span { font-size: 0.8rem; color: var(--muted); background: var(--elevated); padding: 4px 10px; border-radius: 999px; cursor: pointer; }
+</style>
+</head>
+<body data-theme="dark">
+
+<div id="keyGate" class="key-gate">
+  <div class="key-box">
+    <h2 style="margin-bottom:8px;">Lumen</h2>
+    <p>Search. See. Feel.</p>
+    <p style="margin-top:12px;">Enter your free Unsplash Access Key to begin.</p>
+    <input id="apiKeyInput" type="password" placeholder="Access Key" autocomplete="off">
+    <button class="btn" id="saveKey">Start exploring</button>
+    <p style="margin-top:16px;font-size:0.8rem;">Get one at <a href="https://unsplash.com/developers" target="_blank">unsplash.com/developers</a><br>Demo rate limit: 50 req/hour. Key stays in your browser.</p>
+  </div>
+</div>
+
+<header>
+  <div class="logo">Lumen <span>Search. See. Feel.</span></div>
+  <div class="search-wrap">
+    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <input id="search" type="search" placeholder="foggy forest, dark academia, brutalist architecture…" autofocus>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="themeBtn" title="Toggle theme">◐</button>
+    <button class="icon-btn" id="collectionsBtn" title="Collections">☰</button>
+  </div>
+</header>
+
+<main>
+  <div class="filters">
+    <div class="filter-chip active" data-orient="">All</div>
+    <div class="filter-chip" data-orient="landscape">Landscape</div>
+    <div class="filter-chip" data-orient="portrait">Portrait</div>
+    <div class="filter-chip" data-orient="squarish">Square</div>
+    <button class="btn secondary surprise" id="surprise">Surprise me</button>
+  </div>
+  <div id="history" class="history"></div>
+  <div id="masonry" class="masonry"></div>
+  <div id="sentinel" class="sentinel"></div>
+  <div id="loading" class="loading" style="display:none;">Loading more…</div>
+</main>
+
+<div id="detailModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-img"><img id="detailImg" alt=""></div>
+    <div class="modal-side">
+      <button class="icon-btn close-btn" id="closeDetail">✕</button>
+      <h2 id="detailTitle"></h2>
+      <div class="meta" id="detailMeta"></div>
+      <div class="actions">
+        <button class="btn" id="downloadBtn">Download</button>
+        <button class="btn secondary" id="saveBtn">Save to collection</button>
+      </div>
+      <div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;">Related</div>
+        <div id="related" class="history"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="collectionsPanel" class="panel">
+  <div class="panel-header">
+    <h3>Collections</h3>
+    <button class="icon-btn" id="closePanel">✕</button>
+  </div>
+  <div class="panel-body">
+    <div style="margin-bottom:12px;">
+      <input id="newCollectionName" placeholder="New collection name" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--elevated);color:var(--text);">
+      <button class="btn" id="createCollection" style="margin-top:8px;width:100%;">Create</button>
+    </div>
+    <div id="collectionsList"></div>
+  </div>
+</div>
+
+<script>
+const state = {
+  key: localStorage.getItem('lumen_key') || '',
+  query: '',
+  page: 1,
+  orientation: '',
+  results: [],
+  loading: false,
+  hasMore: true,
+  collections: JSON.parse(localStorage.getItem('lumen_collections') || '[]'),
+  history: JSON.parse(localStorage.getItem('lumen_history') || '[]'),
+  theme: localStorage.getItem('lumen_theme') || 'dark',
+  currentPhoto: null
+};
+
+const $ = id => document.getElementById(id);
+const keyGate = $('keyGate');
+const searchInput = $('search');
+const masonry = $('masonry');
+const loadingEl = $('loading');
+const sentinel = $('sentinel');
+
+function applyTheme() {
+  document.body.dataset.theme = state.theme;
+}
+applyTheme();
+
+function saveState() {
+  localStorage.setItem('lumen_collections', JSON.stringify(state.collections));
+  localStorage.setItem('lumen_history', JSON.stringify(state.history.slice(0, 12)));
+  localStorage.setItem('lumen_theme', state.theme);
+}
+
+function addHistory(q) {
+  if (!q) return;
+  state.history = [q, ...state.history.filter(h => h !== q)].slice(0, 12);
+  saveState();
+  renderHistory();
+}
+
+function renderHistory() {
+  $('history').innerHTML = state.history.map(h => `<span data-q="${h}">${h}</span>`).join('');
+  $('history').querySelectorAll('span').forEach(s => {
+    s.onclick = () => { searchInput.value = s.dataset.q; doSearch(s.dataset.q); };
+  });
+}
+renderHistory();
+
+function showKeyGate() { keyGate.classList.remove('hidden'); }
+function hideKeyGate() { keyGate.classList.add('hidden'); }
+
+if (state.key) hideKeyGate(); else showKeyGate();
+
+$('saveKey').onclick = () => {
+  const k = $('apiKeyInput').value.trim();
+  if (!k) return;
+  state.key = k;
+  localStorage.setItem('lumen_key', k);
+  hideKeyGate();
+  searchInput.focus();
+};
+
+$('themeBtn').onclick = () => {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  applyTheme();
+  saveState();
+};
+
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.orientation = chip.dataset.orient;
+    if (state.query) doSearch(state.query);
+  };
+});
+
+async function fetchPhotos(q, page = 1) {
+  const params = new URLSearchParams({
+    query: q,
+    page,
+    per_page: 20,
+    client_id: state.key
+  });
+  if (state.orientation) params.set('orientation', state.orientation);
+  const res = await fetch(`https://api.unsplash.com/search/photos?${params}`);
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+function renderPhoto(photo) {
+  const item = document.createElement('div');
+  item.className = 'masonry-item';
+  item.innerHTML = `
+    <img src="${photo.urls.small}" alt="${photo.alt_description || ''}" loading="lazy">
+    <div class="overlay-info">${photo.user.name} · ${photo.likes} likes</div>
+  `;
+  item.onclick = () => openDetail(photo);
+  masonry.appendChild(item);
+}
+
+async function doSearch(q, append = false) {
+  if (!state.key || !q) return;
+  if (!append) {
+    masonry.innerHTML = '';
+    state.page = 1;
+    state.hasMore = true;
+    state.results = [];
+  }
+  if (state.loading || !state.hasMore) return;
+  state.loading = true;
+  loadingEl.style.display = 'block';
+  state.query = q;
+  addHistory(q);
+  try {
+    const data = await fetchPhotos(q, state.page);
+    data.results.forEach(p => {
+      state.results.push(p);
+      renderPhoto(p);
+    });
+    state.hasMore = state.page < data.total_pages;
+    state.page++;
+  } catch (e) {
+    console.error(e);
+    if (e.message === '401' || e.message === '403') {
+      alert('Invalid or rate-limited key. Check your Unsplash Access Key.');
+      localStorage.removeItem('lumen_key');
+      showKeyGate();
+    }
+  } finally {
+    state.loading = false;
+    loadingEl.style.display = 'none';
+  }
+}
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch(searchInput.value.trim());
+});
+
+const observer = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting && state.query && state.hasMore) doSearch(state.query, true);
+}, { rootMargin: '200px' });
+observer.observe(sentinel);
+
+function openDetail(photo) {
+  state.currentPhoto = photo;
+  $('detailImg').src = photo.urls.regular;
+  $('detailTitle').textContent = photo.alt_description || photo.description || 'Untitled';
+  $('detailMeta').innerHTML = `by <a href="${photo.user.links.html}" target="_blank" style="color:inherit;">${photo.user.name}</a> · ${photo.likes} likes`;
+  $('related').innerHTML = '';
+  const words = (photo.alt_description || '').split(/\s+/).filter(w => w.length > 4).slice(0, 4);
+  words.forEach(w => {
+    const s = document.createElement('span');
+    s.textContent = w;
+    s.onclick = () => { $('detailModal').classList.remove('open'); searchInput.value = w; doSearch(w); };
+    $('related').appendChild(s);
+  });
+  $('detailModal').classList.add('open');
+}
+
+$('closeDetail').onclick = () => $('detailModal').classList.remove('open');
+$('detailModal').onclick = e => { if (e.target === $('detailModal')) $('detailModal').classList.remove('open'); };
+
+$('downloadBtn').onclick = () => {
+  if (!state.currentPhoto) return;
+  window.open(state.currentPhoto.links.download + '?force=true', '_blank');
+};
+
+$('saveBtn').onclick = () => {
+  if (!state.currentPhoto) return;
+  const name = prompt('Collection name (or create new):', 'My collection');
+  if (!name) return;
+  let col = state.collections.find(c => c.name === name);
+  if (!col) {
+    col = { id: Date.now(), name, images: [] };
+    state.collections.push(col);
+  }
+  if (!col.images.some(i => i.id === state.currentPhoto.id)) {
+    col.images.push({
+      id: state.currentPhoto.id,
+      urls: state.currentPhoto.urls,
+      alt: state.currentPhoto.alt_description,
+      user: state.currentPhoto.user.name,
+      html: state.currentPhoto.links.html
+    });
+  }
+  saveState();
+  renderCollections();
+  alert(`Saved to “${name}”`);
+};
+
+function renderCollections() {
+  const list = $('collectionsList');
+  if (!state.collections.length) {
+    list.innerHTML = '<div class="empty">No collections yet.<br>Save images while browsing.</div>';
+    return;
+  }
+  list.innerHTML = state.collections.map(c => `
+    <div class="collection-card" data-id="${c.id}">
+      <h3>${c.name}</h3>
+      <p>${c.images.length} image${c.images.length !== 1 ? 's' : ''}</p>
+    </div>
+  `).join('');
+  list.querySelectorAll('.collection-card').forEach(card => {
+    card.onclick = () => {
+      const col = state.collections.find(c => c.id == card.dataset.id);
+      if (!col) return;
+      masonry.innerHTML = '';
+      state.query = '';
+      col.images.forEach(img => {
+        const item = document.createElement('div');
+        item.className = 'masonry-item';
+        item.innerHTML = `<img src="${img.urls.small}" alt="${img.alt || ''}" loading="lazy">`;
+        item.onclick = () => window.open(img.html, '_blank');
+        masonry.appendChild(item);
+      });
+      $('collectionsPanel').classList.remove('open');
+    };
+  });
+}
+
+$('collectionsBtn').onclick = () => {
+  renderCollections();
+  $('collectionsPanel').classList.add('open');
+};
+$('closePanel').onclick = () => $('collectionsPanel').classList.remove('open');
+
+$('createCollection').onclick = () => {
+  const name = $('newCollectionName').value.trim();
+  if (!name) return;
+  state.collections.push({ id: Date.now(), name, images: [] });
+  $('newCollectionName').value = '';
+  saveState();
+  renderCollections();
+};
+
+$('surprise').onclick = () => {
+  const terms = ['misty mountains', 'brutalist concrete', 'golden hour ocean', 'dark academia library', 'neon city rain', 'minimal white interior', 'foggy forest', 'desert dunes', 'underwater coral', 'cyberpunk street'];
+  const t = terms[Math.floor(Math.random() * terms.length)];
+  searchInput.value = t;
+  doSearch(t);
+};
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== searchInput) {
+    e.preventDefault();
+    searchInput.focus();
+  }
+  if (e.key === 'Escape') {
+    $('detailModal').classList.remove('open');
+    $('collectionsPanel').classList.remove('open');
+  }
+});
+
+if (state.key) {
+  setTimeout(() => doSearch('nature'), 400);
+}
+</script>
+</body>
+</html>
